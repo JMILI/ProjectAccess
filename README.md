@@ -94,6 +94,13 @@ python3 -m http.server 4001 --directory /home/ubuntu2404/code_jm/deployProject/c
 curl -sS http://127.0.0.1:18200/api/projects
 ```
 
+也可以使用一键健康检查脚本（会逐项目检测 GitHub/Tunnel 是否可访问并给出失败项）：
+
+```bash
+cd /home/ubuntu2404/code_jm/deployProject/ProjectAccess
+bash check_links.sh
+```
+
 当前 6 个项目对应关系：
 
 | 项目 | GitHub | Tunnel |
