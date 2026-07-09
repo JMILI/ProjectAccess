@@ -1,6 +1,6 @@
 version: v1
 tunnels:
-  - name: ProjectAccess
+  - name: project-access
     localPort: 18200
     protocol: https
   - name: wisdom-ui
@@ -11,4 +11,10 @@ tunnels:
     protocol: https
   - name: rust-compile-web-ui
     localPort: 5173
+    protocol: https
+  - name: offer-ui
+    localPort: 4000
+    protocol: https
+  - name: cplusbook-ui
+    localPort: 4001
     protocol: https

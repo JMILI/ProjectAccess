@@ -72,6 +72,39 @@ bash tunnel.sh apply
 bash tunnel.sh status
 ```
 
+### offer / cPlusBook 隧道前置
+
+这两个项目默认不是长驻 Web 服务。为了给卡片提供 Tunnel 入口，需要先本地启动静态文件服务：
+
+```bash
+# offer -> http://127.0.0.1:4000
+python3 -m http.server 4000 --directory /home/ubuntu2404/code_jm/deployProject/offer
+
+# cPlusBook -> http://127.0.0.1:4001
+python3 -m http.server 4001 --directory /home/ubuntu2404/code_jm/deployProject/cPlusBook
+```
+
+再执行 `bash tunnel.sh apply`。
+
+## 项目链接检查
+
+可以用下面命令快速检查卡片里配置的 GitHub / Tunnel：
+
+```bash
+curl -sS http://127.0.0.1:18200/api/projects
+```
+
+当前 6 个项目对应关系：
+
+| 项目 | GitHub | Tunnel |
+|---|---|---|
+| wisdom | https://github.com/JMILI/wisdom | https://sealtun-wisdom-ui-ns-km83ebvo.sealosgzg.site |
+| WestChina-Cloud | https://github.com/JMILI/WestChina-Cloud | https://sealtun-westchina-ui-ns-km83ebvo.sealosgzg.site/main/ |
+| encoding_practice | https://github.com/JMILI/encoding_practice | https://sealtun-encoding-practice-web-ns-km83ebvo.sealosgzg.site |
+| cPlusBook | https://github.com/JMILI/cPlusBook | https://sealtun-cplusbook-ui-ns-km83ebvo.sealosgzg.site |
+| offer | https://github.com/JMILI/offerPDF | https://sealtun-offer-ui-ns-km83ebvo.sealosgzg.site |
+| rust-compile-web | https://github.com/JMILI/rust-compile-web | https://sealtun-rust-compile-web-ui-ns-km83ebvo.sealosgzg.site |
+
 ## API
 
 - `GET /api/health`

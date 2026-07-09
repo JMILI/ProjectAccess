@@ -102,7 +102,7 @@ fn all_projects() -> Vec<ProjectDetail> {
             summary: "党内申请、活动审批、资料发布和组织关系管理的一体化系统。".into(),
             local_url: Some("http://127.0.0.1:9527".into()),
             github_url: Some("https://github.com/JMILI/wisdom".into()),
-            tunnel_url: Some("https://sealtun-8ce30700c10649c3-ns-km83ebvo.sealosgzg.site".into()),
+            tunnel_url: Some("https://sealtun-wisdom-ui-ns-km83ebvo.sealosgzg.site".into()),
             architecture_markdown: r#"```mermaid
 flowchart TB
   UI["Vue2 前端 :9527"] --> GW["Gateway :8088"]
@@ -189,7 +189,7 @@ flowchart TB
             summary: "以 Rust Axum 实现的协议组包、解包、位流可视化实验工具。".into(),
             local_url: Some("http://127.0.0.1:3000/".into()),
             github_url: Some("https://github.com/JMILI/encoding_practice".into()),
-            tunnel_url: Some("https://sealtun-f0b11abb6dda48b8-ns-km83ebvo.sealosgzg.site".into()),
+            tunnel_url: Some("https://sealtun-encoding-practice-web-ns-km83ebvo.sealosgzg.site".into()),
             architecture_markdown: r#"```mermaid
 flowchart LR
   WEB["Axum Web"] --> CODEC["协议编解码模块"]
@@ -223,7 +223,7 @@ flowchart LR
             summary: "按主题组织的 C++ 深度学习资料，适合长期知识沉淀和面试回顾。".into(),
             local_url: None,
             github_url: Some("https://github.com/JMILI/cPlusBook".into()),
-            tunnel_url: None,
+            tunnel_url: Some("https://sealtun-cplusbook-ui-ns-km83ebvo.sealosgzg.site".into()),
             architecture_markdown: r#"```mermaid
 flowchart TB
   CONTENT["Markdown 教程内容"] --> BUILD["静态构建"]
@@ -250,7 +250,7 @@ flowchart TB
             summary: "Rust 启动器 + resume.html，快速预览与导出 PDF。".into(),
             local_url: None,
             github_url: Some("https://github.com/JMILI/offerPDF".into()),
-            tunnel_url: None,
+            tunnel_url: Some("https://sealtun-offer-ui-ns-km83ebvo.sealosgzg.site".into()),
             architecture_markdown: r#"```mermaid
 flowchart LR
   RUST["Rust 启动器"] --> BROWSER["默认浏览器"]
@@ -276,7 +276,7 @@ flowchart LR
             summary: "输入源码后可查看 AST/HIR/MIR/LLVM IR/汇编等编译阶段结果。".into(),
             local_url: Some("http://127.0.0.1:5173".into()),
             github_url: Some("https://github.com/JMILI/rust-compile-web".into()),
-            tunnel_url: Some("https://sealtun-7f0fb7f271874fe7-ns-km83ebvo.sealosgzg.site".into()),
+            tunnel_url: Some("https://sealtun-rust-compile-web-ui-ns-km83ebvo.sealosgzg.site".into()),
             architecture_markdown: r#"```mermaid
 flowchart LR
   UI["Vue3 前端"] --> API["Rust 后端 API"]
