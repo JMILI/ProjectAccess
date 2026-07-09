@@ -9,26 +9,50 @@ python3 - <<'PY'
 import json
 import os
 import sys
+import time
 import urllib.request
 import urllib.error
 
 api_url = os.environ.get("API_URL")
-timeout = 15
+timeout = 20
+retries = 3
+retry_delay = 2
+default_headers = {
+    "User-Agent": "ProjectAccessLinkChecker/1.0",
+    "Accept": "*/*",
+}
 
 def fetch_json(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "ProjectAccessLinkChecker/1.0"})
+    req = urllib.request.Request(url, headers=default_headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8", "ignore"))
 
+def check_url_once(url):
+    req = urllib.request.Request(url, headers=default_headers)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return True, resp.status, ""
+
 def check_url(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "ProjectAccessLinkChecker/1.0"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return True, resp.status, ""
-    except urllib.error.HTTPError as e:
-        return False, e.code, f"HTTPError {e.code}"
-    except Exception as e:
-        return False, None, f"{type(e).__name__}: {e}"
+    last_err = ""
+    last_status = None
+    for attempt in range(1, retries + 1):
+        try:
+            ok, status, msg = check_url_once(url)
+            return ok, status, msg
+        except urllib.error.HTTPError as e:
+            last_status = e.code
+            last_err = f"HTTPError {e.code}"
+            if e.code in (404, 502, 503, 504) and attempt < retries:
+                time.sleep(retry_delay)
+                continue
+            return False, e.code, last_err
+        except Exception as e:
+            last_err = f"{type(e).__name__}: {e}"
+            if attempt < retries:
+                time.sleep(retry_delay)
+                continue
+            return False, last_status, last_err
+    return False, last_status, last_err
 
 try:
     projects = fetch_json(api_url)
