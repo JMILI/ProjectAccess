@@ -1,0 +1,14 @@
+version: v1
+tunnels:
+  - name: ProjectAccess
+    localPort: 18200
+    protocol: https
+  - name: wisdom-ui
+    localPort: 9527
+    protocol: https
+  - name: encoding-practice-web
+    localPort: 3000
+    protocol: https
+  - name: rust-compile-web-ui
+    localPort: 5173
+    protocol: https
