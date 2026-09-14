@@ -1,4 +1,4 @@
 {
   "show_project_ids": null,
-  "hide_project_ids": []
+  "hide_project_ids": ["offer","wisdom"]
 }

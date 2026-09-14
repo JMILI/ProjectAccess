@@ -189,7 +189,7 @@ flowchart TB
             summary: "以 Rust Axum 实现的协议组包、解包、位流可视化实验工具。".into(),
             local_url: Some("http://127.0.0.1:3000/".into()),
             github_url: Some("https://github.com/JMILI/encoding_practice".into()),
-            tunnel_url: Some("https://sealtun-encoding-practice-web-ns-km83ebvo.sealosgzg.site".into()),
+            tunnel_url: Some("https://sealtun-encoding-practice-web-ns-km83ebvo.sealosgzg.site/".into()),
             architecture_markdown: r#"```mermaid
 flowchart LR
   WEB["Axum Web"] --> CODEC["协议编解码模块"]
@@ -221,13 +221,14 @@ flowchart LR
             title: "cPlusBook".into(),
             subtitle: "C++ 系统教程工程".into(),
             summary: "按主题组织的 C++ 深度学习资料，适合长期知识沉淀和面试回顾。".into(),
-            local_url: None,
+            local_url: Some("http://127.0.0.1:4001/".into()),
             github_url: Some("https://github.com/JMILI/cPlusBook".into()),
-            tunnel_url: Some("https://sealtun-cplusbook-ui-ns-km83ebvo.sealosgzg.site".into()),
+            tunnel_url: Some("https://sealtun-cplusbook-ui-ns-km83ebvo.sealosgzg.site/".into()),
             architecture_markdown: r#"```mermaid
 flowchart TB
-  CONTENT["Markdown 教程内容"] --> BUILD["静态构建"]
-  BUILD --> WEB["Web 托管访问"]
+  CONTENT["Markdown 教程内容"] --> BUILD["mdbook build"]
+  BUILD --> WEB["静态 HTTP 服务 :4001"]
+  WEB --> TUNNEL["Sealtun 隧道"]
 ```"#
                 .into(),
             business_markdown: r#"| 分类 | 说明 |
@@ -248,19 +249,21 @@ flowchart TB
             title: "offer".into(),
             subtitle: "简历查看与导出".into(),
             summary: "Rust 启动器 + resume.html，快速预览与导出 PDF。".into(),
-            local_url: None,
+            local_url: Some("http://127.0.0.1:4000/".into()),
             github_url: Some("https://github.com/JMILI/offerPDF".into()),
-            tunnel_url: Some("https://sealtun-offer-ui-ns-km83ebvo.sealosgzg.site".into()),
+            tunnel_url: Some("https://sealtun-offer-ui-ns-km83ebvo.sealosgzg.site/".into()),
             architecture_markdown: r#"```mermaid
 flowchart LR
-  RUST["Rust 启动器"] --> BROWSER["默认浏览器"]
-  BROWSER --> HTML["resume.html"]
+  HTML["resume.html / Axum"] --> SVC["简历服务 :4000"]
+  SVC --> API["/api/resumes → MySQL"]
+  SVC --> TUNNEL["Sealtun 隧道"]
 ```"#
                 .into(),
             business_markdown: r#"| 功能 | 说明 |
 |---|---|
-| 预览简历 | 本地浏览器打开 HTML |
+| 预览简历 | 本地 :4000 或 Sealtun 隧道 |
 | 导出 PDF | 浏览器打印为 A4 PDF |
+| 版本持久化 | 保存/查看历史简历（MySQL） |
 "#
             .into(),
             tags: vec!["Rust".into(), "Resume".into()],
@@ -270,16 +273,53 @@ flowchart LR
             }],
         },
         ProjectDetail {
+            id: "fengsheng".into(),
+            title: "风声".into(),
+            subtitle: "村规版在线桌游 · 界面原型".into(),
+            summary: "《风声》村规版玩家端 Vue 原型：当前仅支持 快速试玩 功能，支持人机对战。其余功能有待开发...".into(),
+            local_url: Some("http://127.0.0.1:5173/".into()),
+            github_url: None,
+            tunnel_url: Some(
+                "https://sealtun-fengsheng-vue-ns-km83ebvo.sealosgzg.site/".into(),
+            ),
+            architecture_markdown: r#"```mermaid
+flowchart LR
+  UI["Vue3 玩家端原型 :5173"] --> CORE["对局模块 / 裁决 / 同步"]
+  CORE --> AI["人机替身与 CoT 提示"]
+  UI --> TUNNEL["Sealtun 隧道"]
+```"#
+                .into(),
+            business_markdown: r#"| 模块 | 说明 |
+|---|---|
+| 大厅与开房 | 创建房间、邀请链接、快速试玩 |
+| 对局流程 | 开局→出牌→传递→争夺→结算的村规 FSM |
+| 技能交互 | 角色技能、功能牌、识破链与有效位裁决 |
+| 人机替身 | 本地 AI 替身参与对局，辅助联调与演示 |
+"#
+            .into(),
+            tags: vec!["Vue3".into(), "桌游".into(), "原型".into()],
+            technologies: vec![
+                TechItem {
+                    name: "Vue3 + Vite".into(),
+                    purpose: "玩家端界面原型与交互演示".into(),
+                },
+                TechItem {
+                    name: "Sealtun".into(),
+                    purpose: "公网隧道试玩入口".into(),
+                },
+            ],
+        },
+        ProjectDetail {
             id: "rust-compile-web".into(),
             title: "rust-compile-web".into(),
             subtitle: "Rust 编译阶段可视化".into(),
             summary: "输入源码后可查看 AST/HIR/MIR/LLVM IR/汇编等编译阶段结果。".into(),
-            local_url: Some("http://127.0.0.1:5173".into()),
+            local_url: Some("http://127.0.0.1:5175".into()),
             github_url: Some("https://github.com/JMILI/rust-compile-web".into()),
-            tunnel_url: Some("https://sealtun-rust-compile-web-ui-ns-km83ebvo.sealosgzg.site".into()),
+            tunnel_url: Some("https://sealtun-rust-compile-web-ui-ns-km83ebvo.sealosgzg.site/".into()),
             architecture_markdown: r#"```mermaid
 flowchart LR
-  UI["Vue3 前端"] --> API["Rust 后端 API"]
+  UI["Vue3 前端 :5175"] --> API["Rust 后端 API"]
   API --> RUSTC["nightly rustc"]
   API --> RESULT["阶段输出聚合"]
 ```"#
@@ -447,7 +487,7 @@ const INDEX_HTML: &str = r##"<!doctype html>
         <div class="tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
         <div class="links">
           ${p.github_url ? `<a href="${p.github_url}" target="_blank">GitHub</a>` : `<span class="ghost">GitHub 未配置</span>`}
-          ${p.tunnel_url ? `<a href="${p.tunnel_url}" target="_blank">Tunnel</a>` : `<span class="ghost">隧道未配置</span>`}
+          ${p.tunnel_url ? `<a href="${p.tunnel_url}" target="_blank">Tunnel</a>` : ''}
         </div>
       `;
       node.querySelectorAll('a').forEach(link => {
@@ -472,8 +512,8 @@ const INDEX_HTML: &str = r##"<!doctype html>
       <p>${p.summary}</p>
       <p>
         ${p.github_url ? `<a href="${p.github_url}" target="_blank">GitHub 仓库</a>` : 'GitHub 未配置'}
-        ${p.tunnel_url ? ` | <a href="${p.tunnel_url}" target="_blank">隧道访问</a>` : ' | 隧道未配置'}
-        ${p.local_url ? ` | <span class="muted">本地: ${p.local_url}</span>` : ''}
+        ${p.tunnel_url ? ` | <a href="${p.tunnel_url}" target="_blank">隧道访问</a>` : ''}
+        ${p.local_url ? ` | <a href="${p.local_url}" target="_blank">本地访问</a>` : ''}
       </p>
       <h3>技术栈及用途</h3>
       <table>

@@ -77,6 +77,9 @@ for p in projects:
     for label, key in [("GitHub", "github_url"), ("Tunnel", "tunnel_url")]:
         url = p.get(key)
         if not url:
+            if key == "tunnel_url":
+                print(f"  - {label:<6} SKIP    (not configured)")
+                continue
             fail += 1
             print(f"  - {label:<6} MISSING")
             continue

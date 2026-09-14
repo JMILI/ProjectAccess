@@ -6,15 +6,21 @@ tunnels:
   - name: wisdom-ui
     localPort: 9527
     protocol: https
+  - name: westchina-ui
+    localPort: 5000
+    protocol: https
   - name: encoding-practice-web
     localPort: 3000
     protocol: https
   - name: rust-compile-web-ui
-    localPort: 5173
+    localPort: 5175
     protocol: https
   - name: offer-ui
     localPort: 4000
     protocol: https
   - name: cplusbook-ui
     localPort: 4001
+    protocol: https
+  - name: fengsheng-vue
+    localPort: 5173
     protocol: https
