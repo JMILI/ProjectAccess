@@ -24,3 +24,6 @@ tunnels:
   - name: fengsheng-vue
     localPort: 5173
     protocol: https
+  - name: rust-thread-async-memory-ui
+    localPort: 5180
+    protocol: https

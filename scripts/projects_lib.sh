@@ -8,7 +8,26 @@ CODE_JM_ROOT="$(cd "${DEPLOY_ROOT}/.." && pwd)"
 FENGSHENG_DIR="${FENGSHENG_DIR:-${CODE_JM_ROOT}/fengsheng/design/03-vue-prototype}"
 RUN_DIR="${PROJECT_ACCESS_DIR}/.run"
 
+# Prefer the rustup toolchain over distro cargo/rustc: several projects ship
+# Cargo.lock v4, which the distro cargo (1.75) cannot parse.
+if [ -x "${HOME}/.cargo/bin/cargo" ]; then
+  case ":$PATH:" in
+    *":${HOME}/.cargo/bin:"*) ;;
+    *) PATH="${HOME}/.cargo/bin:${PATH}"; export PATH ;;
+  esac
+fi
+
 mkdir -p "$RUN_DIR"
+
+# Network layer: keep local ports + Sealos/sealtun off the Windows HTTP proxy.
+# VPN on/off must not break 127.0.0.1 preview or tunnel control plane.
+if [ -f "${CODE_JM_ROOT}/devnet/lib/proxy.sh" ]; then
+  # shellcheck source=/dev/null
+  source "${CODE_JM_ROOT}/devnet/lib/proxy.sh"
+  # Only ensure NO_PROXY here; do not force proxy on/off mid-script (user/shell owns that).
+  export NO_PROXY="$(devnet_no_proxy_list)"
+  export no_proxy="$NO_PROXY"
+fi
 
 log() {
   echo "[$(date '+%H:%M:%S')] $*"
@@ -23,10 +42,15 @@ wait_port() {
   local timeout="${2:-60}"
   local label="${3:-:${port}}"
   local i
+  log "waiting for ${label} (up to ${timeout}s)..."
   for ((i = 1; i <= timeout; i++)); do
     if port_listening "$port"; then
-      log "ready ${label}"
+      log "ready ${label} (${i}s)"
       return 0
+    fi
+    # Heartbeat so long waits (WestChina/wisdom) do not look hung.
+    if (( i % 10 == 0 )); then
+      log "still waiting ${label}... ${i}/${timeout}s (detail: ${RUN_DIR}/*.log)"
     fi
     sleep 1
   done
@@ -76,10 +100,26 @@ pids_on_port() {
 
 kill_port() {
   local port="$1"
-  local pid
+  local pid i
   for pid in $(pids_on_port "$port"); do
     kill "$pid" 2>/dev/null || true
   done
+  # pids_on_port 依赖 ss -p 的可见性；进程若是别的用户（例如以前用 root 起过）看不到，
+  # 这里用 fuser 兜底，并在端口仍被占用时明确报错而不是静默成功。
+  for i in 1 2 3 4 5; do
+    port_listening "$port" || return 0
+    sleep 0.4
+  done
+  if command -v fuser >/dev/null 2>&1; then
+    fuser -k -TERM "${port}/tcp" >/dev/null 2>&1 || true
+    sleep 0.6
+    port_listening "$port" || return 0
+    fuser -k -KILL "${port}/tcp" >/dev/null 2>&1 || true
+    sleep 0.4
+    port_listening "$port" || return 0
+  fi
+  log "WARN: 端口 ${port} 仍被占用（可能是别的用户/root 起的进程，请用 sudo 或重启 WSL 释放）"
+  return 1
 }
 
 kill_port_hard() {
@@ -97,7 +137,9 @@ start_bg() {
   local logfile="${RUN_DIR}/${name}.log"
   stop_pid "$name"
   cd "$dir" || return 1
-  nohup "$@" >>"$logfile" 2>&1 &
+  # setsid: leave the launching session so a wrapper (npm/bash/java launcher)
+  # cannot take the real server down with it when the orchestrator exits.
+  setsid nohup "$@" >>"$logfile" 2>&1 </dev/null &
   write_pid "$name" "$!"
   log "started ${name} (pid $!) log=${logfile}"
 }
@@ -112,12 +154,13 @@ normalize_project() {
     offer | offerPDF) echo "offer" ;;
     rust-compile | rust-compile-web) echo "rust-compile" ;;
     fengsheng | fengsheng-vue | 风声) echo "fengsheng" ;;
+    rust-thread | rust-thread-async-memory | rustThread | rust-memory | rust-memory-layout) echo "rust-thread" ;;
     *) echo "$1" ;;
   esac
 }
 
-ALL_PROJECTS=(hub wisdom westchina encoding cplusbook offer rust-compile fengsheng)
-LIGHT_PROJECTS=(hub offer cplusbook encoding rust-compile fengsheng)
+ALL_PROJECTS=(hub wisdom westchina encoding cplusbook offer rust-compile fengsheng rust-thread)
+LIGHT_PROJECTS=(hub offer cplusbook encoding rust-compile fengsheng rust-thread)
 
 should_run_project() {
   local name="$1"
@@ -154,7 +197,8 @@ print_port_status() {
   local url="${3:-http://127.0.0.1:${port}/}"
   if port_listening "$port"; then
     local code
-    code="$(curl -s -o /dev/null -w '%{http_code}' -m 3 "$url" 2>/dev/null || echo "---")"
+    # --noproxy '*': never send local health checks through Clash/VPN proxy
+    code="$(curl -s -o /dev/null -w '%{http_code}' -m 3 --noproxy '*' "$url" 2>/dev/null || echo "---")"
     printf "  %-18s :%-5s  OK (%s)  %s\n" "$name" "$port" "$code" "$url"
   else
     printf "  %-18s :%-5s  DOWN\n" "$name" "$port"
@@ -172,6 +216,7 @@ tunnel_spec_for_project() {
     offer) echo "offer-ui:4000" ;;
     rust-compile) echo "rust-compile-web-ui:5175" ;;
     fengsheng) echo "fengsheng-vue:5173" ;;
+    rust-thread) echo "rust-thread-async-memory-ui:5180" ;;
     *) return 1 ;;
   esac
 }
@@ -211,13 +256,70 @@ sealtun_status_blob() {
 }
 
 # Soft preflight: "Logged in: yes" is necessary but not sufficient
-# (expired tokens still show Logged in). Hard fail happens on Unauthorized
-# during `sealtun start` below.
+# (expired tokens still show Logged in; billing drain shows Workspace unavailable).
 sealtun_auth_usable() {
   local blob
   blob="$(sealtun_status_blob)" || return 1
   echo "$blob" | grep -q "Logged in: yes" || return 1
+  if echo "$blob" | grep -qi "Workspace: unavailable"; then
+    return 1
+  fi
   return 0
+}
+
+# Default: tunnels are required with local start/stop.
+# Opt out only with SKIP_TUNNEL=1 (start) or KEEP_TUNNEL=1 (stop).
+tunnels_required() {
+  [ "${SKIP_TUNNEL:-0}" != "1" ] && [ "${KEEP_TUNNEL:-0}" != "1" ]
+}
+
+# Preflight for starting tunnels. Returns 0 if OK to proceed.
+# When tunnels are required, prints ERROR (not soft WARN) and returns 1.
+#
+# NOTE: sealtun status prints "Workspace: unavailable" when auth.json has no
+# current_workspace metadata — that is NOT a live billing probe. After recharge,
+# Namespace (kubeconfig) can still be valid and tunnels can start. Gate on login
+# + Namespace instead of that display string alone.
+sealtun_preflight_for_start() {
+  local blob
+  if [ "${SKIP_TUNNEL:-0}" = "1" ]; then
+    log "SKIP_TUNNEL=1 — tunnels not required this run"
+    return 0
+  fi
+
+  blob="$(sealtun_status_blob 2>/dev/null || true)"
+  if [ -z "$blob" ]; then
+    log "ERROR: sealtun status unavailable (timeout/network)"
+    log "ERROR: need reachability to https://gzg.sealos.run then: sealtun login gzg"
+    log "ERROR: or local-only: SKIP_TUNNEL=1 bash start_all.sh ..."
+    return 1
+  fi
+  if ! echo "$blob" | grep -q "Logged in: yes"; then
+    log "ERROR: sealtun not logged in — run: sealtun login gzg"
+    log "ERROR: or local-only: SKIP_TUNNEL=1 bash start_all.sh ..."
+    return 1
+  fi
+
+  # Prefer real kube/namespace signal over the display-only Workspace line.
+  if echo "$blob" | grep -qiE 'Namespace:[[:space:]]+ns-'; then
+    if echo "$blob" | grep -qi "Workspace: unavailable"; then
+      log "NOTE: status shows Workspace: unavailable (missing login metadata) but Namespace is set — continuing tunnels"
+    fi
+    return 0
+  fi
+
+  if echo "$blob" | grep -qi "Workspace: unavailable"; then
+    log "ERROR: Sealos Workspace unavailable and no Namespace in sealtun status"
+    log "ERROR: recharge https://gzg.sealos.run then: sealtun login gzg  (expect a 'Logged in to workspace: ns-...' line)"
+    log "ERROR: or local-only: SKIP_TUNNEL=1 bash start_all.sh ..."
+    return 1
+  fi
+  return 0
+}
+
+# Backward-compatible alias used by older call sites.
+sealtun_preflight_warn() {
+  sealtun_preflight_for_start
 }
 
 sealtun_list_cached() {
@@ -280,7 +382,8 @@ maybe_restart_sealtun_daemon() {
   rm -f "${HOME}/.sealtun/daemon.runtime.lock" 2>/dev/null || true
   # Warm daemon so subsequent `start` does not race a dead PID.
   # shellcheck disable=SC2086
-  $cmd daemon >>"${RUN_DIR}/sealtun-ensure.log" 2>&1 &
+  # 必须 setsid+nohup 脱离控制终端，否则脚本/会话退出时 daemon 会被一起带走（隧道全部变 502）
+  setsid nohup $cmd daemon >>"${RUN_DIR}/sealtun-ensure.log" 2>&1 </dev/null &
   sleep 2
   SEALTUN_STATUS_CACHE=""
   # shellcheck disable=SC2086
@@ -342,6 +445,7 @@ wait_tunnel_active() {
 # - Missing tunnels: apply then start
 # - start Unauthorized/error: cleanup+apply recreate (do NOT abort whole batch)
 # - Never wrap sealtun start in GNU timeout
+# Returns 0 only when every needed tunnel is active (or SKIP_TUNNEL=1).
 ensure_selected_tunnels() {
   local mode="$1"
   shift
@@ -350,7 +454,7 @@ ensure_selected_tunnels() {
   local list_out status start_out
   local -a need_names=()
   local -a need_ports=()
-  local i tmp logfile ok=0
+  local i logfile ok=0 expected=0
 
   if [ "${SKIP_TUNNEL:-0}" = "1" ]; then
     log "SKIP_TUNNEL=1, skip sealtun"
@@ -358,15 +462,13 @@ ensure_selected_tunnels() {
   fi
 
   cmd="$(resolve_sealtun_cmd)" || {
-    log "WARN: sealtun not installed, local-only (npm i -g sealtun)"
-    return 0
+    log "ERROR: sealtun not installed (npm i -g sealtun)"
+    return 1
   }
 
   SEALTUN_STATUS_CACHE=""
-  if ! sealtun_logged_in; then
-    log "WARN: sealtun not logged in — local OK, tunnels skipped"
-    log "WARN: run once: sealtun login gzg"
-    return 0
+  if ! sealtun_preflight_for_start; then
+    return 1
   fi
 
   log "=== sealtun tunnels for selected projects ==="
@@ -381,8 +483,9 @@ ensure_selected_tunnels() {
     spec="$(tunnel_spec_for_project "$project")" || continue
     name="${spec%%:*}"
     port="${spec##*:}"
+    expected=$((expected + 1))
     if ! port_listening "$port"; then
-      log "skip tunnel ${name}: local :${port} DOWN"
+      log "ERROR: tunnel ${name} needs local :${port} UP first — local start incomplete"
       continue
     fi
     need_names+=("$name")
@@ -390,8 +493,8 @@ ensure_selected_tunnels() {
   done
 
   if [ "${#need_names[@]}" -eq 0 ]; then
-    log "no listening ports to tunnel"
-    return 0
+    log "ERROR: no local ports ready to tunnel (${expected} projects selected)"
+    return 1
   fi
 
   list_out="$(sealtun_list_cached)"
@@ -416,7 +519,7 @@ ensure_selected_tunnels() {
           log "tunnel ${name} active"
           ok=$((ok + 1))
         else
-          log "WARN: tunnel ${name} applied but not active — see ${logfile}"
+          log "ERROR: tunnel ${name} applied but not active — see ${logfile}"
         fi
       fi
       list_out="$(sealtun_list_cached)"
@@ -435,17 +538,16 @@ ensure_selected_tunnels() {
       continue
     fi
 
-    # start failed or stuck — recreate (common after Sealos billing reclaim)
     log "WARN: start ${name} failed; recreating (cleanup+apply)"
     if echo "$start_out" | grep -qi 'Unauthorized\|re-login\|permission'; then
-      log "NOTE: Unauthorized on ${name} — often stale remote after billing reclaim; recreating, not aborting batch"
+      log "NOTE: Unauthorized on ${name} — recreating after possible billing reclaim"
     fi
     if recreate_project_tunnel "$cmd" "$name" "$port" "$logfile"; then
       if wait_tunnel_active "$name" 120; then
         log "tunnel ${name} active"
         ok=$((ok + 1))
       else
-        log "WARN: tunnel ${name} still not active — see ${logfile}"
+        log "ERROR: tunnel ${name} still not active — see ${logfile}"
       fi
     fi
     list_out="$(sealtun_list_cached)"
@@ -461,5 +563,89 @@ ensure_selected_tunnels() {
     printf "  %-24s %-8s %s\n" "$name" "$status" "$(tunnel_public_url "$name")"
   done
   log "tunnel ensure done (${ok}/${#need_names[@]} active); log=${logfile}"
-  [ "$ok" -gt 0 ]
+  if [ "$ok" -lt "${#need_names[@]}" ]; then
+    log "ERROR: not all tunnels active (${ok}/${#need_names[@]})"
+    return 1
+  fi
+  return 0
+}
+
+# Stop sealtun tunnels for selected projects (best-effort).
+# Skip with KEEP_TUNNEL=1 or SKIP_TUNNEL=1.
+stop_selected_tunnels() {
+  local mode="$1"
+  shift
+  local -a selected=("$@")
+  local project spec name cmd list_out
+
+  if [ "${KEEP_TUNNEL:-0}" = "1" ] || [ "${SKIP_TUNNEL:-0}" = "1" ]; then
+    log "KEEP_TUNNEL/SKIP_TUNNEL set — leave sealtun tunnels running"
+    return 0
+  fi
+
+  cmd="$(resolve_sealtun_cmd)" || {
+    log "WARN: sealtun not installed — cannot stop tunnels"
+    return 0
+  }
+
+  log "=== stop sealtun tunnels for selected projects ==="
+  list_out="$(timeout 40 $cmd list 2>/dev/null || true)"
+  for project in "${ALL_PROJECTS[@]}"; do
+    if ! should_run_project "$project" "$mode" "${selected[@]}"; then
+      continue
+    fi
+    spec="$(tunnel_spec_for_project "$project")" || continue
+    name="${spec%%:*}"
+    if [ -z "$list_out" ] || ! echo "$list_out" | awk 'NR>1 {print $1}' | grep -qx "$name"; then
+      log "tunnel ${name}: not in local list (skip)"
+      continue
+    fi
+    log "stop tunnel ${name}"
+    # shellcheck disable=SC2086
+    $cmd stop "$name" >>"${RUN_DIR}/sealtun-stop.log" 2>&1 || true
+  done
+}
+
+# Expected local port for a project (primary UI/API port we wait on).
+local_port_for_project() {
+  case "$1" in
+    hub) echo "18200" ;;
+    wisdom) echo "9527" ;;
+    westchina) echo "5000" ;;
+    encoding) echo "3000" ;;
+    cplusbook) echo "4001" ;;
+    offer) echo "4000" ;;
+    rust-compile) echo "5175" ;;
+    fengsheng) echo "5173" ;;
+    rust-thread) echo "5180" ;;
+    *) return 1 ;;
+  esac
+}
+
+# Verify every selected project has its local port listening. Returns 0 if all OK.
+verify_selected_locals() {
+  local mode="$1"
+  shift
+  local -a selected=("$@")
+  local project port missing=0
+
+  echo "----------------------------------------"
+  echo "Local ports (selected):"
+  for project in "${ALL_PROJECTS[@]}"; do
+    if ! should_run_project "$project" "$mode" "${selected[@]}"; then
+      continue
+    fi
+    port="$(local_port_for_project "$project")" || continue
+    if port_listening "$port"; then
+      printf "  %-16s :%-5s OK\n" "$project" "$port"
+    else
+      printf "  %-16s :%-5s DOWN\n" "$project" "$port"
+      missing=$((missing + 1))
+    fi
+  done
+  if [ "$missing" -gt 0 ]; then
+    log "ERROR: ${missing} selected local service(s) still DOWN"
+    return 1
+  fi
+  return 0
 }
