@@ -4,12 +4,12 @@
 PROJECT_ACCESS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPLOY_ROOT="$(cd "${PROJECT_ACCESS_DIR}/.." && pwd)"
 CODE_JM_ROOT="$(cd "${DEPLOY_ROOT}/.." && pwd)"
-# 风声有两份：
-#   fengsheng     -> 仓库旁路 code_jm/fengsheng/frontend/prototype（原项目，5173）
-#   fengsheng-dev -> deployProject/fengsheng/frontend/prototype（二次开发副本，5178）
-#   说明：后台管理原型（frontend/admin，5179）不纳入编排，用 fengsheng/design/start-design-uis.sh 启动。
+# 风声有两份（均已回退到未重组目录的 abe704a 版本，原型在 design/03-vue-prototype）：
+#   fengsheng     -> 仓库旁路 code_jm/fengsheng/design/03-vue-prototype（原项目，5173）
+#   fengsheng-dev -> deployProject/fengsheng/design/03-vue-prototype（二次开发副本，5178）
+#   说明：后台管理原型（design/04-admin-prototype，5179）不纳入编排，单独启动。
 FENGSHENG_DIR="${FENGSHENG_DIR:-${CODE_JM_ROOT}/fengsheng/design/03-vue-prototype}"
-FENGSHENG_DEV_DIR="${FENGSHENG_DEV_DIR:-${DEPLOY_ROOT}/fengsheng/frontend/prototype}"
+FENGSHENG_DEV_DIR="${FENGSHENG_DEV_DIR:-${DEPLOY_ROOT}/fengsheng/design/03-vue-prototype}"
 RUN_DIR="${PROJECT_ACCESS_DIR}/.run"
 
 # Prefer the rustup toolchain over distro cargo/rustc: several projects ship

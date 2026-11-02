@@ -229,7 +229,7 @@ start_fengsheng() {
 }
 
 start_fengsheng_dev() {
-  log "=== fengsheng-dev Vue prototype (frontend/prototype 副本, port 5178) ==="
+  log "=== fengsheng-dev Vue prototype (design/03-vue-prototype 副本, port 5178) ==="
   local dir="${FENGSHENG_DEV_DIR}"
   if [ ! -d "$dir" ]; then
     log "ERROR: fengsheng-dev dir missing: ${dir}"
