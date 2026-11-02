@@ -8,16 +8,21 @@
 - 业务逻辑说明（Markdown 表格）
 - 本地链接与隧道链接
 
-当前已接入项目：
+`start_all.sh` / `pa.sh` 编排的项目（本地端口）：
 
-- wisdom
-- westChina (WestChina-Cloud)
-- encoding_practice
-- cPlusBook
-- offer
-- rust-compile-web
-- fengsheng（风声）
-- rust-thread-async-memory（Rust 内存/线程教程）
+| 项目 | 端口 | 说明 |
+|---|---|---|
+| hub（ProjectAccess 自身） | 18200 | 项目导航站 |
+| westChina (WestChina-Cloud) | 5000 | UI + Java 后端 + AI 服务（9810/9800 等） |
+| encoding_practice | 3000 | 交互实验台 |
+| cPlusBook | 4001 | mdbook 静态站 |
+| offer | 4000 | 岗位收集 + 邮件 |
+| rust-compile-web | 5175（UI）/ 18080（API） | Rust 编译阶段探索 |
+| fengsheng（风声） | 5173 | 仓库外原项目（`~/code_jm/fengsheng`） |
+| fengsheng-dev | 5178 | deployProject 内的风声副本，二次开发用 |
+| rust-thread-async-memory | 5180 | Rust 内存/线程教程 |
+
+> hub 页面目前只建了 7 张卡片（`wisdom` / `westChina` / `encoding_practice` / `cPlusBook` / `offer` / `rust-compile-web` / `fengsheng`）；`rust-thread` 与 `fengsheng-dev` 有编排端口但不会出现在卡片里。wisdom 已删除，默认流程会跳过它。
 
 ## 前置条件（一条命令体检）
 
@@ -35,7 +40,7 @@ bash pa.sh doctor          # node / npm / cargo / java / mvn / sealtun / docker 
 | Rust nightly | rust-compile 后端（`backend/rust-toolchain.toml`） | 1.101.0-nightly |
 | **JDK 8** | WestChina-Cloud 后端（Spring Cloud） | `/usr/lib/jvm/java-8-openjdk-amd64`，`~/tools/jdk8` 是软链 |
 | Maven 3.8 | 首次构建 WestChina 后端（`mvn package`） | `apt install maven` |
-| Docker | wisdom / WestChina 的 mysql·redis·nacos·rabbit·minio | 中间件容器常驻 |
+| Docker | WestChina 的 mysql·redis·nacos·rabbit·minio（`dockerOfMy/`） | 中间件容器常驻 |
 | Sealtun | 公网隧道 | **锁 0.0.40**（0.0.41/0.0.42 云端镜像 404，起不来） |
 
 > Sealtun 版本一定要 0.0.40：`npm i -g sealtun@0.0.40`。0.0.42 生成的 Pod 会 `ImagePullBackOff`（`ghcr.io/gitlayzer/sealtun:0.0.42` 已被删除），表现为 `wait for ready: context deadline exceeded`。
@@ -45,9 +50,8 @@ bash pa.sh doctor          # node / npm / cargo / java / mvn / sealtun / docker 
 ```bash
 cd /home/ubuntu2404/code_jm/deployProject/ProjectAccess
 
-bash pa.sh up                 # 默认 8 个项目：本地 + 隧道（wisdom 未恢复，见下）
-bash pa.sh up wisdom          # 显式点名才会尝试 wisdom
-bash pa.sh up light           # 轻量组合（跳过 wisdom / WestChina）
+bash pa.sh up                 # 默认 9 个项目：本地 + 隧道
+bash pa.sh up light           # 轻量组合（跳过 WestChina，省内存）
 bash pa.sh up encoding offer hub   # 只起这几个（可任意组合）
 bash pa.sh status             # 端口 + 隧道状态
 bash pa.sh url                # 打印本地与公网链接
@@ -80,15 +84,13 @@ bash pa.sh restart offer      # 重启单个
 | fengsheng-dev（风声二次开发副本，`deployProject/fengsheng`） | http://127.0.0.1:5178/ | https://sealtun-fengsheng-dev-ns-km83ebvo.sealosgzg.site/ |
 | rust-thread-async-memory | http://127.0.0.1:5180/ | https://sealtun-rust-thread-async-memory-ui-ns-km83ebvo.sealosgzg.site/ |
 | WestChina-Cloud | http://127.0.0.1:5000/main/ · /administrator/ · /ct/ | https://sealtun-westchina-ui-ns-km83ebvo.sealosgzg.site/main/ |
-| wisdom | http://127.0.0.1:9527/ | https://sealtun-wisdom-ui-ns-km83ebvo.sealosgzg.site/ |
 
 > **风声有两份，互不影响：**
 > - `fengsheng`（5173，隧道 `fengsheng-vue`）：仓库旁的 `code_jm/fengsheng` 原项目，保持原样；
 > - `fengsheng-dev`（5178，隧道 `fengsheng-dev`）：从原项目复制到 `deployProject/fengsheng` 的副本，**后续二次开发在这里改**。
 > 两份各自独立启停：`bash pa.sh down fengsheng-dev` 只停副本，不会碰 5173。
 
-> `wisdom` 目前在 `deployProject/wisdom/` 下只剩 `front/`，代码未恢复，跑不起来；因此 `pa.sh up` 的默认集合是上表 **去掉 wisdom 的 9 个**。
-> 恢复后想带上它，用 `bash pa.sh up wisdom` 或 `bash start_all.sh wisdom`。
+> `wisdom` 已归档删除（源仓库 [JMILI/wisdom](https://github.com/JMILI/wisdom) 仍在）。`start_all.sh` 里保留了它的历史分支，点名 `bash start_all.sh wisdom` 会因目录缺失直接报错，属预期行为。
 
 实测结论（2026-10-31）：**VPN 开 / 关都不影响**本地 `127.0.0.1` 与公网隧道访问 —— WSL 是 mirrored 网络（`.wslconfig` 由 devnet 生成），Windows 代理 bypass 里含 `localhost;127.*;192.168.*`，隧道域名走公网直连。
 
@@ -150,17 +152,17 @@ bash stop_all.sh cplusbook && bash start_all.sh cplusbook
 # 查看各端口与隧道状态
 bash status_all.sh
 
-# 启动全部 9 个（WestChina + 轻量项目 + Hub + fengsheng + fengsheng-dev + rust-thread；wisdom 需显式指定）
+# 启动全部 9 个（Hub + WestChina + 4 个轻量项目 + fengsheng + fengsheng-dev + rust-thread）
 bash start_all.sh
 
-# 仅启动轻量项目（跳过 wisdom / WestChina，省内存）
+# 仅启动轻量项目（跳过 WestChina，省内存）
 bash start_all.sh light
 
 # 停止全部
 bash stop_all.sh
 
-# 停止并关闭 Docker 中间件（wisdom / WestChina）
-STOP_DOCKER=1 bash stop_all.sh wisdom westchina
+# 停止并关闭 Docker 中间件（WestChina）
+STOP_DOCKER=1 bash stop_all.sh westchina
 ```
 
 `start_all` **退出码**：所选本地全 UP 且隧道全 active → `0`；否则 → `1`（除非 `ALLOW_PARTIAL=1` 或 `SKIP_TUNNEL=1` 且本地 OK）。
@@ -264,16 +266,18 @@ wsl -d Ubuntu-24.04 -u root -- bash -c 'fuser -k 5173/tcp 5180/tcp 18200/tcp'
 
 ```text
 ProjectAccess managed services
+run_dir: /home/ubuntu2404/code_jm/deployProject/ProjectAccess/.run
 ----------------------------------------
   ProjectAccess hub  :18200  DOWN
-  wisdom UI          :9527   DOWN
   WestChina UI       :5000   DOWN
   encoding_practice  :3000   DOWN
   offer              :4000   DOWN
   cPlusBook          :4001   DOWN
   fengsheng UI       :5173   DOWN
+  fengsheng-dev UI   :5178   DOWN
+  rust-thread UI     :5180   DOWN
   rust-compile UI    :5175   DOWN
-  rust-compile API   (8080/18080) DOWN
+  rust-compile API   (18080/8080) DOWN
 ----------------------------------------
 Active sealtun tunnels (named):
   (sealtun list timeout or unavailable — check: sealtun status / login gzg)
@@ -281,16 +285,19 @@ Active sealtun tunnels (named):
 
 说明：默认 `stop_all.sh` 会先停所选 **Sealtun 隧道**，再停本地进程（`KEEP_TUNNEL=1` 可只停本地）。若 `sealtun list` 超时 / `Workspace: unavailable`，外网链接本来就打不开；本地仍应全部显示 `DOWN`。
 
-**本地启动成功（示例，端口 OK）：**
+**本地启动成功（示例，端口 OK）：**（`rust-compile API` 只有 `/api/*` 路由，根路径 `GET /` 返回 404，属正常）
 
 ```text
   ProjectAccess hub  :18200  OK (200)  http://127.0.0.1:18200/
   WestChina UI       :5000   OK (200)  http://127.0.0.1:5000/main/
   encoding_practice  :3000   OK (200)  http://127.0.0.1:3000/
+  offer              :4000   OK (200)  http://127.0.0.1:4000/
   cPlusBook          :4001   OK (200)  http://127.0.0.1:4001/
   fengsheng UI       :5173   OK (200)  http://127.0.0.1:5173/
+  fengsheng-dev UI   :5178   OK (200)  http://127.0.0.1:5178/
+  rust-thread UI     :5180   OK (200)  http://127.0.0.1:5180/
   rust-compile UI    :5175   OK (200)  http://127.0.0.1:5175/
-  rust-compile API   :8080   OK (200)  http://127.0.0.1:8080/
+  rust-compile API   :18080  OK (404)  http://127.0.0.1:18080/
 ```
 
 **隧道也正常时**，底部应出现类似：
@@ -316,7 +323,7 @@ Active sealtun tunnels (named):
 ```
 
 然后 `status_all` 各端口均为 `DOWN`（见上）。  
-若只要再停 Docker 中间件：`STOP_DOCKER=1 bash stop_all.sh wisdom westchina`。
+若只要再停 Docker 中间件：`STOP_DOCKER=1 bash stop_all.sh westchina`。
 
 ### `sealtun status` / `sealtun login gzg`
 
@@ -487,17 +494,21 @@ cd /home/ubuntu2404/code_jm/deployProject/ProjectAccess
 bash check_links.sh
 ```
 
-当前 7 个项目对应关系：
+当前 9 个被编排项目（含 hub 自身）的本地端口与固定隧道：
 
 | 项目 | GitHub | Tunnel |
 |---|---|---|
-| 风声 | — | https://sealtun-fengsheng-vue-ns-km83ebvo.sealosgzg.site/ |
-| wisdom | https://github.com/JMILI/wisdom | https://sealtun-wisdom-ui-ns-km83ebvo.sealosgzg.site |
+| hub（ProjectAccess 自身） | — | https://sealtun-project-access-ns-km83ebvo.sealosgzg.site/ |
+| 风声（仓库外原项目，5173） | https://github.com/JMILI/fengsheng（private） | https://sealtun-fengsheng-vue-ns-km83ebvo.sealosgzg.site/ |
+| 风声副本 fengsheng-dev（5178） | 同上仓库 | https://sealtun-fengsheng-dev-ns-km83ebvo.sealosgzg.site/ |
 | WestChina-Cloud | https://github.com/JMILI/WestChina-Cloud | https://sealtun-westchina-ui-ns-km83ebvo.sealosgzg.site/main/ |
 | encoding_practice | https://github.com/JMILI/encoding_practice | https://sealtun-encoding-practice-web-ns-km83ebvo.sealosgzg.site/ |
 | cPlusBook | https://github.com/JMILI/cPlusBook | https://sealtun-cplusbook-ui-ns-km83ebvo.sealosgzg.site/ |
 | offer | https://github.com/JMILI/offerPDF | https://sealtun-offer-ui-ns-km83ebvo.sealosgzg.site/ |
 | rust-compile-web | https://github.com/JMILI/rust-compile-web | https://sealtun-rust-compile-web-ui-ns-km83ebvo.sealosgzg.site/ |
+| rust-thread-async-memory | https://github.com/JMILI/rust-thread-async-memory | https://sealtun-rust-thread-async-memory-ui-ns-km83ebvo.sealosgzg.site/ |
+
+> `wisdom` 已从 `deployProject` 删除（含 `start_all.sh` 里的历史清理逻辑），表里不再列它；hub 卡片是否显示由 `projects-config.json` 决定。
 
 ## API
 
@@ -513,9 +524,11 @@ bash check_links.sh
 ```json
 {
   "show_project_ids": null,
-  "hide_project_ids": []
+  "hide_project_ids": ["offer", "wisdom"]
 }
 ```
+
+> 仓库里现有的 `projects-config.json` 就是上面这份（隐藏 offer 与 wisdom），改完需重启 hub 才生效。
 
 字段说明：
 
@@ -524,7 +537,7 @@ bash check_links.sh
 
 项目 ID（可用于配置）：
 
-- `wisdom`
+- `wisdom`（卡片还在，但项目已删除）
 - `westChina`
 - `encoding_practice`
 - `cPlusBook`
@@ -532,11 +545,13 @@ bash check_links.sh
 - `rust-compile-web`
 - `fengsheng`
 
+（只有已建卡的项目 ID 可用；`rust-thread`、`fengsheng-dev` 暂无卡片。）
+
 示例 1（只展示两个项目）：
 
 ```json
 {
-  "show_project_ids": ["wisdom", "westChina"],
+  "show_project_ids": ["westChina", "cPlusBook"],
   "hide_project_ids": []
 }
 ```

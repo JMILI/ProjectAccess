@@ -48,12 +48,12 @@ else
   MODE="all"
 fi
 
-# 默认 all：只带 8 个已恢复的项目；wisdom 在 deployProject/wisdom 里只剩 front/（未恢复），
+# 默认 all：只带 9 个已恢复的项目（8 个 hub 卡片 + fengsheng-dev 副本）；wisdom 已删除，
 # 需要时显式 `bash start_all.sh wisdom` 再试，避免默认流程被它拖成 incomplete。
 DEFAULT_PROJECTS=(hub westchina encoding cplusbook offer rust-compile fengsheng fengsheng-dev rust-thread)
 if [ "${#SELECT[@]}" -eq 0 ] && { [ "$MODE" = "all" ] || [ "$MODE" = "light" ]; }; then
   SELECT=("${DEFAULT_PROJECTS[@]}")
-  log "note: wisdom 未恢复（deployProject/wisdom 只有 front/），默认跳过；如已恢复可显式指定 wisdom"
+  log "note: wisdom 已删除（deployProject/wisdom 只有 front/），默认跳过；如已恢复可显式指定 wisdom"
 fi
 
 LOCAL_FAIL=0
