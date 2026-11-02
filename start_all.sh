@@ -203,7 +203,7 @@ start_rust_compile() {
 }
 
 start_fengsheng() {
-  log "=== fengsheng Vue prototype (frontend/prototype, port 5173) ==="
+  log "=== fengsheng Vue prototype (design/03-vue-prototype, port 5173) ==="
   local dir="${FENGSHENG_DIR}"
   if [ ! -d "$dir" ]; then
     log "ERROR: fengsheng dir missing: ${dir}"
