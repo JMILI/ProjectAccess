@@ -21,7 +21,7 @@ Modes:
   light  Start hub + light projects (skip wisdom & WestChina)
 
 Projects (optional filter):
-  hub, wisdom, westchina, encoding, cplusbook, offer, rust-compile, fengsheng, rust-thread
+  hub, wisdom, westchina, encoding, cplusbook, offer, rust-compile, fengsheng, fengsheng-dev, rust-thread
   (default `all` = 上述列表去掉 wisdom；wisdom 需要显式指定)
 
 Environment:
@@ -50,7 +50,7 @@ fi
 
 # 默认 all：只带 8 个已恢复的项目；wisdom 在 deployProject/wisdom 里只剩 front/（未恢复），
 # 需要时显式 `bash start_all.sh wisdom` 再试，避免默认流程被它拖成 incomplete。
-DEFAULT_PROJECTS=(hub westchina encoding cplusbook offer rust-compile fengsheng rust-thread)
+DEFAULT_PROJECTS=(hub westchina encoding cplusbook offer rust-compile fengsheng fengsheng-dev rust-thread)
 if [ "${#SELECT[@]}" -eq 0 ] && { [ "$MODE" = "all" ] || [ "$MODE" = "light" ]; }; then
   SELECT=("${DEFAULT_PROJECTS[@]}")
   log "note: wisdom 未恢复（deployProject/wisdom 只有 front/），默认跳过；如已恢复可显式指定 wisdom"
@@ -228,6 +228,33 @@ start_fengsheng() {
   require_port 5173 "fengsheng"
 }
 
+start_fengsheng_dev() {
+  log "=== fengsheng-dev Vue prototype (deployProject 副本, port 5178) ==="
+  local dir="${FENGSHENG_DEV_DIR}"
+  if [ ! -d "$dir" ]; then
+    log "ERROR: fengsheng-dev dir missing: ${dir}"
+    LOCAL_FAIL=$((LOCAL_FAIL + 1))
+    return 1
+  fi
+  if [ ! -d "${dir}/node_modules" ]; then
+    log "npm install (fengsheng-dev first run)..."
+    (cd "$dir" && npm install) >>"${RUN_DIR}/fengsheng-dev-npm.log" 2>&1 || {
+      log "ERROR: npm install failed, see ${RUN_DIR}/fengsheng-dev-npm.log"
+      LOCAL_FAIL=$((LOCAL_FAIL + 1))
+      return 1
+    }
+  fi
+  if port_listening 5178; then
+    log "fengsheng-dev already listening on 5178, skip"
+    return 0
+  fi
+  # 副本的 package.json dev 脚本写死了 --port 5173，这里直接调 vite 覆盖端口
+  start_bg fengsheng-dev "$dir" \
+    "${dir}/node_modules/.bin/vite" --host 0.0.0.0 --port 5178
+  wait_port 5178 90 "fengsheng-dev:5178" || true
+  require_port 5178 "fengsheng-dev"
+}
+
 start_rust_thread() {
   log "=== rust-thread-async-memory (port 5180) ==="
   local dir="${DEPLOY_ROOT}/rust-thread-async-memory"
@@ -276,6 +303,7 @@ if should_run_project cplusbook "$MODE" "${SELECT[@]}"; then start_cplusbook || 
 if should_run_project offer "$MODE" "${SELECT[@]}"; then start_offer || true; fi
 if should_run_project rust-compile "$MODE" "${SELECT[@]}"; then start_rust_compile || true; fi
 if should_run_project fengsheng "$MODE" "${SELECT[@]}"; then start_fengsheng || true; fi
+if should_run_project fengsheng-dev "$MODE" "${SELECT[@]}"; then start_fengsheng_dev || true; fi
 if should_run_project rust-thread "$MODE" "${SELECT[@]}"; then start_rust_thread || true; fi
 if should_run_project hub "$MODE" "${SELECT[@]}"; then start_hub || true; fi
 if should_run_project westchina "$MODE" "${SELECT[@]}"; then start_westchina || true; fi

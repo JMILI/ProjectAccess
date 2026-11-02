@@ -136,6 +136,15 @@ stop_fengsheng() {
   kill_port 5173
 }
 
+stop_fengsheng_dev() {
+  log "=== stop fengsheng-dev (5178) ==="
+  stop_pid fengsheng-dev
+  if [ -n "${FENGSHENG_DEV_DIR:-}" ] && [ -d "${FENGSHENG_DEV_DIR}" ]; then
+    pkill -f "${FENGSHENG_DEV_DIR}/node_modules/.bin/vite" 2>/dev/null || true
+  fi
+  kill_port 5178
+}
+
 stop_rust_thread() {
   log "=== stop rust-thread (5180) ==="
   stop_pid rust-thread
@@ -146,6 +155,7 @@ stop_rust_thread() {
 if should_run_project hub "$MODE" "${SELECT[@]}"; then stop_hub; fi
 if should_run_project rust-compile "$MODE" "${SELECT[@]}"; then stop_rust_compile; fi
 if should_run_project fengsheng "$MODE" "${SELECT[@]}"; then stop_fengsheng; fi
+if should_run_project fengsheng-dev "$MODE" "${SELECT[@]}"; then stop_fengsheng_dev; fi
 if should_run_project rust-thread "$MODE" "${SELECT[@]}"; then stop_rust_thread; fi
 if should_run_project offer "$MODE" "${SELECT[@]}"; then stop_offer; fi
 if should_run_project cplusbook "$MODE" "${SELECT[@]}"; then stop_cplusbook; fi

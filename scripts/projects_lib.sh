@@ -4,8 +4,11 @@
 PROJECT_ACCESS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPLOY_ROOT="$(cd "${PROJECT_ACCESS_DIR}/.." && pwd)"
 CODE_JM_ROOT="$(cd "${DEPLOY_ROOT}/.." && pwd)"
-# 风声 Vue 原型不在 deployProject/ 下，而在仓库旁路 fengsheng/
+# 风声有两份：
+#   fengsheng     -> 仓库旁路 code_jm/fengsheng（原项目，5173）
+#   fengsheng-dev -> deployProject/fengsheng（二次开发副本，5178）
 FENGSHENG_DIR="${FENGSHENG_DIR:-${CODE_JM_ROOT}/fengsheng/design/03-vue-prototype}"
+FENGSHENG_DEV_DIR="${FENGSHENG_DEV_DIR:-${DEPLOY_ROOT}/fengsheng/design/03-vue-prototype}"
 RUN_DIR="${PROJECT_ACCESS_DIR}/.run"
 
 # Prefer the rustup toolchain over distro cargo/rustc: several projects ship
@@ -154,13 +157,14 @@ normalize_project() {
     offer | offerPDF) echo "offer" ;;
     rust-compile | rust-compile-web) echo "rust-compile" ;;
     fengsheng | fengsheng-vue | 风声) echo "fengsheng" ;;
+    fengsheng-dev | fengsheng_dev | 风声-dev | 风声副本) echo "fengsheng-dev" ;;
     rust-thread | rust-thread-async-memory | rustThread | rust-memory | rust-memory-layout) echo "rust-thread" ;;
     *) echo "$1" ;;
   esac
 }
 
-ALL_PROJECTS=(hub wisdom westchina encoding cplusbook offer rust-compile fengsheng rust-thread)
-LIGHT_PROJECTS=(hub offer cplusbook encoding rust-compile fengsheng rust-thread)
+ALL_PROJECTS=(hub wisdom westchina encoding cplusbook offer rust-compile fengsheng fengsheng-dev rust-thread)
+LIGHT_PROJECTS=(hub offer cplusbook encoding rust-compile fengsheng fengsheng-dev rust-thread)
 
 should_run_project() {
   local name="$1"
@@ -216,6 +220,7 @@ tunnel_spec_for_project() {
     offer) echo "offer-ui:4000" ;;
     rust-compile) echo "rust-compile-web-ui:5175" ;;
     fengsheng) echo "fengsheng-vue:5173" ;;
+    fengsheng-dev) echo "fengsheng-dev:5178" ;;
     rust-thread) echo "rust-thread-async-memory-ui:5180" ;;
     *) return 1 ;;
   esac
@@ -617,6 +622,7 @@ local_port_for_project() {
     offer) echo "4000" ;;
     rust-compile) echo "5175" ;;
     fengsheng) echo "5173" ;;
+    fengsheng-dev) echo "5178" ;;
     rust-thread) echo "5180" ;;
     *) return 1 ;;
   esac

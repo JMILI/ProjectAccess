@@ -30,6 +30,7 @@ port_of() {
     cplusbook) echo 4001 ;;
     rust-compile) echo 5175 ;;
     fengsheng) echo 5173 ;;
+    fengsheng-dev) echo 5178 ;;
     rust-thread) echo 5180 ;;
     *) echo "" ;;
   esac
@@ -66,7 +67,7 @@ case "$cmd" in
     ;;
   url)
     printf '%-14s %-7s %-24s %s\n' PROJECT PORT LOCAL TUNNEL
-    for p in hub wisdom westchina encoding offer cplusbook rust-compile fengsheng rust-thread; do
+    for p in hub wisdom westchina encoding offer cplusbook rust-compile fengsheng fengsheng-dev rust-thread; do
       port="$(port_of "$p")"
       tun="$(tunnel_of "$p")"
       if [ -n "$tun" ]; then

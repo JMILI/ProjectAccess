@@ -76,12 +76,18 @@ bash pa.sh restart offer      # 重启单个
 | cPlusBook | http://127.0.0.1:4001/ | https://sealtun-cplusbook-ui-ns-km83ebvo.sealosgzg.site/ |
 | offer（求职工作台） | http://127.0.0.1:4000/ | https://sealtun-offer-ui-ns-km83ebvo.sealosgzg.site/ |
 | rust-compile-web（前端/后端） | http://127.0.0.1:5175/ · API http://127.0.0.1:18080/ | https://sealtun-rust-compile-web-ui-ns-km83ebvo.sealosgzg.site/ |
-| fengsheng（风声） | http://127.0.0.1:5173/ | https://sealtun-fengsheng-vue-ns-km83ebvo.sealosgzg.site/ |
+| fengsheng（风声，仓库旁路 `code_jm/fengsheng`） | http://127.0.0.1:5173/ | https://sealtun-fengsheng-vue-ns-km83ebvo.sealosgzg.site/ |
+| fengsheng-dev（风声二次开发副本，`deployProject/fengsheng`） | http://127.0.0.1:5178/ | https://sealtun-fengsheng-dev-ns-km83ebvo.sealosgzg.site/ |
 | rust-thread-async-memory | http://127.0.0.1:5180/ | https://sealtun-rust-thread-async-memory-ui-ns-km83ebvo.sealosgzg.site/ |
 | WestChina-Cloud | http://127.0.0.1:5000/main/ · /administrator/ · /ct/ | https://sealtun-westchina-ui-ns-km83ebvo.sealosgzg.site/main/ |
 | wisdom | http://127.0.0.1:9527/ | https://sealtun-wisdom-ui-ns-km83ebvo.sealosgzg.site/ |
 
-> `wisdom` 目前在 `deployProject/wisdom/` 下只剩 `front/`，代码未恢复，跑不起来；因此 `pa.sh up` 的默认集合是上表 **去掉 wisdom 的 8 个**。
+> **风声有两份，互不影响：**
+> - `fengsheng`（5173，隧道 `fengsheng-vue`）：仓库旁的 `code_jm/fengsheng` 原项目，保持原样；
+> - `fengsheng-dev`（5178，隧道 `fengsheng-dev`）：从原项目复制到 `deployProject/fengsheng` 的副本，**后续二次开发在这里改**。
+> 两份各自独立启停：`bash pa.sh down fengsheng-dev` 只停副本，不会碰 5173。
+
+> `wisdom` 目前在 `deployProject/wisdom/` 下只剩 `front/`，代码未恢复，跑不起来；因此 `pa.sh up` 的默认集合是上表 **去掉 wisdom 的 9 个**。
 > 恢复后想带上它，用 `bash pa.sh up wisdom` 或 `bash start_all.sh wisdom`。
 
 实测结论（2026-10-31）：**VPN 开 / 关都不影响**本地 `127.0.0.1` 与公网隧道访问 —— WSL 是 mirrored 网络（`.wslconfig` 由 devnet 生成），Windows 代理 bypass 里含 `localhost;127.*;192.168.*`，隧道域名走公网直连。
@@ -144,7 +150,7 @@ bash stop_all.sh cplusbook && bash start_all.sh cplusbook
 # 查看各端口与隧道状态
 bash status_all.sh
 
-# 启动全部 8 个（WestChina + 轻量项目 + Hub + fengsheng + rust-thread；wisdom 需显式指定）
+# 启动全部 9 个（WestChina + 轻量项目 + Hub + fengsheng + fengsheng-dev + rust-thread；wisdom 需显式指定）
 bash start_all.sh
 
 # 仅启动轻量项目（跳过 wisdom / WestChina，省内存）

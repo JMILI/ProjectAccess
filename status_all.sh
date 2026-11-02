@@ -15,6 +15,7 @@ print_port_status "encoding_practice" 3000 "http://127.0.0.1:3000/"
 print_port_status "offer" 4000 "http://127.0.0.1:4000/"
 print_port_status "cPlusBook" 4001 "http://127.0.0.1:4001/"
 print_port_status "fengsheng UI" 5173 "http://127.0.0.1:5173/"
+print_port_status "fengsheng-dev UI" 5178 "http://127.0.0.1:5178/"
 print_port_status "rust-thread UI" 5180 "http://127.0.0.1:5180/"
 print_port_status "rust-compile UI" 5175 "http://127.0.0.1:5175/"
 
